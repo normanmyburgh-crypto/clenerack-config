@@ -186,9 +186,10 @@
       <div class="field">
         <label>Roof Interface</label>
         <select id="rtInterface" onchange="updateKitPreview()">
-          <option value="Tile Hook">Tile Hook</option>
+          <option value="TILE HOOK">Tile Hook</option>
           <option value="IBR">IBR</option>
-          <option value="Corrugated">Corrugated</option>
+          <option value="CORRUGATED">Corrugated</option>
+          <option value="KLIPLOK">Kliplok</option>
         </select>
       </div>
       <div class="field">
@@ -301,7 +302,7 @@ function getKitName() {
   if (currentMode === 'rooftop') {
     const iface = document.getElementById('rtInterface').value;
     const panels = parseInt(document.getElementById('rtPanels').value) || 0;
-    return panels > 0 ? iface + ' ' + panels : null;
+    return panels > 0 ? panels + ' Panel ' + iface : null;
   }
   return document.getElementById('gmSize').value + ' Panel Ground Mount';
 }
@@ -320,8 +321,12 @@ function updateKitPreview() {
   const matched = kitName && src.length > 0 && src.some(r => r.kitName === kitName);
   const badge = document.getElementById(isRT ? 'rtKitBadge' : 'gmKitBadge');
   const label = document.getElementById(isRT ? 'rtKitName'  : 'gmKitName');
-  if (matched) { badge.classList.add('visible'); label.textContent = kitName; }
-  else { badge.classList.remove('visible'); }
+  if (kitName) {
+    badge.classList.add('visible');
+    label.textContent = kitName + (db && !matched ? ' (not found in data)' : '');
+  } else {
+    badge.classList.remove('visible');
+  }
 }
 
 function clearBOM() {

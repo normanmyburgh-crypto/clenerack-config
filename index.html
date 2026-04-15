@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CLENERACK | CONFIGURATOR</title>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 40px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid #333; max-width: 600px; margin-bottom: 20px; }
+        h1 { color: #ffffff; border-left: 4px solid #00d4ff; padding-left: 15px; font-size: 1.2rem; }
+        select, input { background: #2a2a2a; color: #00d4ff; border: none; border-bottom: 2px solid #333; padding: 8px; width: 100%; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #ffffff; color: #333; border-radius: 8px; overflow: hidden; }
+        th { background: #333; color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+    <h1>CLENERACK | GROUND CONFIGURATOR</h1>
+    
+    <div class="card">
+        <label>Table Size</label>
+        <select id="tableSize" onchange="updateBOM()">
+            <option value="12">12 Panel Ground Mount</option>
+            <option value="18">18 Panel Ground Mount</option>
+        </select>
+
+        <label>Number of Tables</label>
+        <input type="number" id="numTables" value="1" oninput="updateBOM()">
+    </div>
+
+    <table id="bomTable">
+        <thead>
+            <tr>
+                <th>Stock Code</th>
+                <th>Description</th>
+                <th>Qty</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <script>
+        let fullData = [];
+
+        // Replace with your Google Web App URL
+        const apiUrl = 'YOUR_GOOGLE_WEB_APP_URL_HERE';
+
+        async function fetchData() {
+            const response = await fetch(apiUrl);
+            fullData = await response.json();
+            updateBOM();
+        }
+
+        function updateBOM() {
+            const selectedKit = document.getElementById('tableSize').value + " Panel Ground Mount";
+            const multiplier = document.getElementById('numTables').value;
+            const tbody = document.querySelector('#bomTable tbody');
+            tbody.innerHTML = '';
+
+            const filtered = fullData.filter(row => row.kitName === selectedKit);
+            
+            filtered.forEach(item => {
+                const row = `<tr>
+                    <td>${item.stockCode}</td>
+                    <td>${item.description}</td>
+                    <td>${item.qty * multiplier}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>

@@ -251,19 +251,24 @@
     </div>
   </div>
 
-  <!-- DEBUG PANEL: shows real kit names from API so you can confirm exact format -->
-  <div id="debugPanel" style="margin-top:20px; background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:18px; display:none;">
-    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#606060; margin-bottom:12px;">Kit name diagnostic — exact kit names loaded from your spreadsheet</div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-      <div>
-        <div style="font-size:10px; color:#00d4ff; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Rooftop kits</div>
-        <div id="debugRooftop" style="font-family:monospace; font-size:11px; color:#808080; line-height:1.8;"></div>
+  <!-- DEBUG PANEL: collapsible -->
+  <div id="debugPanel" style="margin-top:20px; display:none;">
+    <details style="background:#1a1a1a; border:1px solid #333; border-radius:12px; overflow:hidden;">
+      <summary style="padding:14px 18px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#606060; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; user-select:none;">
+        <span>Kit name diagnostic — exact kit names loaded from your spreadsheet</span>
+        <svg id="debugChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#606060" stroke-width="2" stroke-linecap="round" style="transition:transform 0.2s; flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div style="padding:0 18px 18px; border-top:1px solid #2a2a2a; padding-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div>
+          <div style="font-size:10px; color:#00d4ff; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Rooftop kits</div>
+          <div id="debugRooftop" style="font-family:monospace; font-size:11px; color:#808080; line-height:1.8;"></div>
+        </div>
+        <div>
+          <div style="font-size:10px; color:#bb86fc; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Ground Mount kits</div>
+          <div id="debugGround" style="font-family:monospace; font-size:11px; color:#808080; line-height:1.8;"></div>
+        </div>
       </div>
-      <div>
-        <div style="font-size:10px; color:#bb86fc; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Ground Mount kits</div>
-        <div id="debugGround" style="font-family:monospace; font-size:11px; color:#808080; line-height:1.8;"></div>
-      </div>
-    </div>
+    </details>
   </div>
 </div>
 
@@ -410,6 +415,13 @@ function updateDebugPanel() {
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+document.addEventListener('toggle', e => {
+  if (e.target.tagName === 'DETAILS') {
+    const chevron = e.target.querySelector('#debugChevron');
+    if (chevron) chevron.style.transform = e.target.open ? 'rotate(180deg)' : '';
+  }
+}, true);
 
 loadData();
 </script>

@@ -157,6 +157,15 @@ tfoot.ft-master td:last-child { color: var(--warn); }
 .btn-pdf { padding: 8px 16px; background: linear-gradient(135deg, #1a1a1a, #222); border: 1px solid var(--warn); border-radius: var(--r-sm); color: var(--warn); font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; font-family: var(--font); transition: all 0.18s; display: flex; align-items: center; gap: 6px; }
 .btn-pdf:hover { background: rgba(255,183,77,0.08); }
 
+/* PROJECT DETAILS FIELDS */
+.project-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; padding: 16px 22px; border-bottom: 1px solid var(--border); background: var(--card2); }
+@media (max-width: 620px) { .project-fields { grid-template-columns: 1fr; } }
+.project-field label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 7px; }
+.project-field input { width: 100%; padding: 8px 12px; background: var(--card); border: 1px solid var(--border2); border-radius: var(--r-sm); color: var(--text-primary); font-size: 13px; font-family: var(--font); outline: none; transition: border-color 0.18s; }
+.project-field input:focus { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(255,183,77,0.1); }
+.project-field input::placeholder { color: var(--text-muted); }
+.req { color: #ff5252; font-size: 12px; vertical-align: middle; margin-left: 1px; }
+
 /* HISTORY LOG */
 .history-list { padding: 12px 22px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .history-item { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-secondary); padding: 6px 10px; background: var(--card2); border-radius: 7px; border: 1px solid var(--border); }
@@ -321,10 +330,26 @@ tfoot.ft-master td:last-child { color: var(--warn); }
       </div>
       <div class="cart-header-right">
         <button class="btn-clear" onclick="clearProject()">Clear All</button>
-        <button class="btn-pdf" onclick="downloadPDF()">
+        <button class="btn-pdf" id="btnPDF" onclick="downloadPDF()" disabled style="opacity:0.35;cursor:not-allowed;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
           Download PDF
         </button>
+      </div>
+    </div>
+
+    <!-- Project Details Fields -->
+    <div class="project-fields">
+      <div class="project-field">
+        <label>Project Name <span class="req">*</span></label>
+        <input type="text" id="projName" placeholder="e.g. Greenfield Farm Install" oninput="checkProjectFields()">
+      </div>
+      <div class="project-field">
+        <label>Client Name <span class="req">*</span></label>
+        <input type="text" id="projClient" placeholder="e.g. Acme Solar Ltd" oninput="checkProjectFields()">
+      </div>
+      <div class="project-field">
+        <label>Sales Person <span class="req">*</span></label>
+        <input type="text" id="projSales" placeholder="e.g. Jane Smith" oninput="checkProjectFields()">
       </div>
     </div>
 
@@ -648,58 +673,108 @@ function renderProjectCart() {
 function downloadPDF() {
   if (!projectHistory.length) { showTempMessage('Add at least one array to the project first.'); return; }
 
+  const projName   = document.getElementById('projName').value.trim();
+  const projClient = document.getElementById('projClient').value.trim();
+  const projSales  = document.getElementById('projSales').value.trim();
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const today = new Date().toLocaleDateString('en-ZA', { year:'numeric', month:'long', day:'numeric' });
-  let y = 18;
+  let y = 0;
 
-  // ── Header bar
+  // ── Header bar background
   doc.setFillColor(18, 18, 18);
-  doc.rect(0, 0, W, 28, 'F');
-  doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.setTextColor(0, 212, 255);
-  doc.text('EZ-BOM', 14, 14);
+  doc.rect(0, 0, W, 32, 'F');
+
+  // Try to embed the logo image from the page
+  const logoImg = document.querySelector('.header-logo');
+  let logoLoaded = false;
+  if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+    try {
+      const canvas = document.createElement('canvas');
+      const scale = 3;
+      canvas.width  = logoImg.naturalWidth  * scale;
+      canvas.height = logoImg.naturalHeight * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.drawImage(logoImg, 0, 0);
+      const dataUrl = canvas.toDataURL('image/png');
+      const aspect  = logoImg.naturalWidth / logoImg.naturalHeight;
+      const imgH    = 12;
+      const imgW    = imgH * aspect;
+      doc.addImage(dataUrl, 'PNG', 14, (32 - imgH) / 2, imgW, imgH);
+      logoLoaded = true;
+    } catch(e) { /* cross-origin fallback */ }
+  }
+  if (!logoLoaded) {
+    doc.setFontSize(16); doc.setFont('helvetica','bold');
+    doc.setTextColor(0, 212, 255);
+    doc.text('EZ-BOM', 14, 20);
+  }
+
+  // Date top-right
   doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.setTextColor(160, 160, 160);
-  doc.text('Solar Bill of Materials', 14, 20);
-  doc.setFontSize(8);
-  doc.text('Generated: ' + today, W - 14, 14, { align: 'right' });
-  doc.text('EZ-BOM Platform', W - 14, 20, { align: 'right' });
+  doc.text('Generated: ' + today, W - 14, 20, { align: 'right' });
 
-  y = 36;
+  y = 42;
 
-  // ── Project Summary heading
+  // ── Project Info block
   doc.setFontSize(9); doc.setFont('helvetica','bold');
   doc.setTextColor(255, 183, 77);
-  doc.text('PROJECT SUMMARY', 14, y); y += 5;
+  doc.text('PROJECT DETAILS', 14, y); y += 4;
   doc.setDrawColor(255, 183, 77); doc.setLineWidth(0.3);
   doc.line(14, y, W - 14, y); y += 6;
 
-  // History entries
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
+  const detailCols = [
+    ['Project:', projName],
+    ['Client:', projClient],
+    ['Sales Person:', projSales],
+    ['Date:', today],
+  ];
+  const colW2 = (W - 28) / 2;
+  detailCols.forEach(([label, val], i) => {
+    const x = i % 2 === 0 ? 14 : 14 + colW2;
+    if (i % 2 === 0 && i > 0) y += 8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+    doc.text(label, x, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
+    doc.text(val, x + 30, y);
+  });
+
+  y += 12;
+
+  // ── Arrays Summary
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(255, 183, 77);
+  doc.text('ARRAYS / STRINGS', 14, y); y += 4;
+  doc.setDrawColor(255, 183, 77);
+  doc.line(14, y, W - 14, y); y += 6;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(8);
   projectHistory.forEach((e, i) => {
     const mode = e.mode === 'rooftop' ? 'Rooftop' : 'Ground Mount';
-    doc.setTextColor(50, 50, 50);
+    doc.setTextColor(50, 50, 50); doc.setFont('helvetica','bold');
     doc.text(`${i + 1}.  ${e.arrayName}`, 16, y);
-    doc.setTextColor(120, 120, 120);
-    doc.text(`${mode}  ·  ${e.kitName}  ×  ${e.multiplier}`, 60, y);
-    y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(120, 120, 120);
+    doc.text(`${mode}  ·  ${e.kitName}  ×  ${e.multiplier}`, 62, y);
+    y += 5.5;
     if (y > pageH - 40) { doc.addPage(); y = 20; }
   });
 
   y += 6;
 
-  // ── Consolidated BOM heading
+  // ── Consolidated BOM
   doc.setFontSize(9); doc.setFont('helvetica','bold');
   doc.setTextColor(255, 183, 77);
-  doc.text('CONSOLIDATED BILL OF MATERIALS', 14, y); y += 5;
+  doc.text('CONSOLIDATED BILL OF MATERIALS', 14, y); y += 4;
   doc.setDrawColor(255, 183, 77);
   doc.line(14, y, W - 14, y); y += 4;
 
   const tableBody = masterBOM.map(m => [m.stockCode, m.description, String(m.qty)]);
-  let grandTotal = masterBOM.reduce((s, m) => s + m.qty, 0);
+  const grandTotal = masterBOM.reduce((s, m) => s + m.qty, 0);
 
   doc.autoTable({
     startY: y,
@@ -715,40 +790,29 @@ function downloadPDF() {
     theme: 'grid'
   });
 
-  y = doc.lastAutoTable.finalY + 14;
-  if (y > pageH - 30) { doc.addPage(); y = 20; }
-
-  // ── Warehouse sign-off
-  doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
-  doc.line(14, y, W - 14, y); y += 6;
-  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(80,80,80);
-  doc.text('WAREHOUSE SIGN-OFF', 14, y); y += 7;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
-
-  const fields = [
-    ['Picked by:', '__________________________'],
-    ['Checked by:', '__________________________'],
-    ['Date:', '__________________________'],
-    ['Signature:', '__________________________'],
-  ];
-  const colW = (W - 28) / 2;
-  fields.forEach(([label, blank], i) => {
-    const col = i % 2 === 0 ? 14 : 14 + colW + 8;
-    if (i % 2 === 0 && i > 0) y += 10;
-    doc.setTextColor(100,100,100); doc.text(label, col, y);
-    doc.setTextColor(180,180,180); doc.text(blank, col + 28, y);
-  });
-
-  y += 14;
+  // ── Footer
+  y = doc.lastAutoTable.finalY + 10;
+  if (y > pageH - 14) { doc.addPage(); y = pageH - 14; }
   doc.setFontSize(7); doc.setTextColor(180,180,180); doc.setFont('helvetica','italic');
   doc.text('Generated by EZ-BOM · ' + today, W / 2, y, { align: 'center' });
 
-  doc.save('EZ-BOM_Project_' + new Date().toISOString().slice(0,10) + '.pdf');
+  const safeName = (projName || 'Project').replace(/[^a-z0-9]/gi, '_');
+  doc.save('EZ-BOM_' + safeName + '_' + new Date().toISOString().slice(0,10) + '.pdf');
 }
 
 /* ═══════════════════════════════════════════════
    UI HELPERS
 ═══════════════════════════════════════════════ */
+function checkProjectFields() {
+  const filled = document.getElementById('projName').value.trim() &&
+                 document.getElementById('projClient').value.trim() &&
+                 document.getElementById('projSales').value.trim();
+  const btn = document.getElementById('btnPDF');
+  btn.disabled = !filled;
+  btn.style.opacity = filled ? '1' : '0.35';
+  btn.style.cursor  = filled ? 'pointer' : 'not-allowed';
+}
+
 function flashCartButton(isRT) {
   const btns = document.querySelectorAll('.btn-add');
   btns.forEach(b => {

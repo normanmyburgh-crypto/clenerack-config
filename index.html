@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EZ-BOM</title>
+<meta name="description" content="EZ-BOM Solar Configurator — Bill of Materials Generator">
+<meta name="theme-color" content="#121212">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EZ-BOM">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23121212'/%3E%3Cg stroke='%2300d4ff' stroke-width='1.5' fill='none' stroke-linecap='round'%3E%3Crect x='8' y='14' width='22' height='16' rx='1.5'/%3E%3Cline x1='8' y1='19.3' x2='30' y2='19.3'/%3E%3Cline x1='8' y1='24.7' x2='30' y2='24.7'/%3E%3Cline x1='16.7' y1='14' x2='16.7' y2='30'/%3E%3Cline x1='21.3' y1='14' x2='21.3' y2='30'/%3E%3Crect x='34' y='14' width='22' height='16' rx='1.5'/%3E%3Cline x1='34' y1='19.3' x2='56' y2='19.3'/%3E%3Cline x1='34' y1='24.7' x2='56' y2='24.7'/%3E%3Cline x1='42.7' y1='14' x2='42.7' y2='30'/%3E%3Cline x1='47.3' y1='14' x2='47.3' y2='30'/%3E%3Crect x='8' y='34' width='22' height='16' rx='1.5'/%3E%3Cline x1='8' y1='39.3' x2='30' y2='39.3'/%3E%3Cline x1='8' y1='44.7' x2='30' y2='44.7'/%3E%3Cline x1='16.7' y1='34' x2='16.7' y2='50'/%3E%3Cline x1='21.3' y1='34' x2='21.3' y2='50'/%3E%3Crect x='34' y='34' width='22' height='16' rx='1.5'/%3E%3Cline x1='34' y1='39.3' x2='56' y2='39.3'/%3E%3Cline x1='34' y1='44.7' x2='56' y2='44.7'/%3E%3Cline x1='42.7' y1='34' x2='42.7' y2='50'/%3E%3Cline x1='47.3' y1='34' x2='47.3' y2='50'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23121212'/%3E%3Cg stroke='%2300d4ff' stroke-width='4' fill='none' stroke-linecap='round'%3E%3Crect x='18' y='36' width='62' height='46' rx='4'/%3E%3Cline x1='18' y1='51.3' x2='80' y2='51.3'/%3E%3Cline x1='18' y1='66.7' x2='80' y2='66.7'/%3E%3Cline x1='38.7' y1='36' x2='38.7' y2='82'/%3E%3Cline x1='59.3' y1='36' x2='59.3' y2='82'/%3E%3Crect x='100' y='36' width='62' height='46' rx='4'/%3E%3Cline x1='100' y1='51.3' x2='162' y2='51.3'/%3E%3Cline x1='100' y1='66.7' x2='162' y2='66.7'/%3E%3Cline x1='120.7' y1='36' x2='120.7' y2='82'/%3E%3Cline x1='141.3' y1='36' x2='141.3' y2='82'/%3E%3Crect x='18' y='98' width='62' height='46' rx='4'/%3E%3Cline x1='18' y1='113.3' x2='80' y2='113.3'/%3E%3Cline x1='18' y1='128.7' x2='80' y2='128.7'/%3E%3Cline x1='38.7' y1='98' x2='38.7' y2='144'/%3E%3Cline x1='59.3' y1='98' x2='59.3' y2='144'/%3E%3Crect x='100' y='98' width='62' height='46' rx='4'/%3E%3Cline x1='100' y1='113.3' x2='162' y2='113.3'/%3E%3Cline x1='100' y1='128.7' x2='162' y2='128.7'/%3E%3Cline x1='120.7' y1='98' x2='120.7' y2='144'/%3E%3Cline x1='141.3' y1='98' x2='141.3' y2='144'/%3E%3C/g%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -367,7 +375,9 @@ let lastMultiplier = 1;
 
 // Project Cart state
 let projectHistory = [];   // [{ arrayName, kitName, multiplier, mode, rows[] }]
-let masterBOM      = {};   // { stockCode: { description, qty } }
+// masterBOM is an ARRAY to preserve spreadsheet order:
+// [{ stockCode, description, qty }]  — one entry per unique stockCode, in first-seen order
+let masterBOM      = [];
 
 /* ═══════════════════════════════════════════════
    DATA LOAD
@@ -544,13 +554,14 @@ function addToProject() {
   // Push to history
   projectHistory.push({ arrayName, kitName, multiplier, mode: currentMode, rows });
 
-  // Accumulate into masterBOM
+  // Accumulate into masterBOM — preserving first-seen spreadsheet order
   rows.forEach(r => {
     const qty = Math.ceil(r.qty * multiplier);
-    if (masterBOM[r.stockCode]) {
-      masterBOM[r.stockCode].qty += qty;
+    const existing = masterBOM.find(m => m.stockCode === r.stockCode);
+    if (existing) {
+      existing.qty += qty;
     } else {
-      masterBOM[r.stockCode] = { description: r.description, qty };
+      masterBOM.push({ stockCode: r.stockCode, description: r.description, qty });
     }
   });
 
@@ -565,12 +576,13 @@ function removeFromProject(index) {
   const entry = projectHistory[index];
   if (!entry) return;
 
-  // Subtract its quantities from masterBOM
+  // Subtract its quantities from masterBOM ordered array
   entry.rows.forEach(r => {
     const qty = Math.ceil(r.qty * entry.multiplier);
-    if (masterBOM[r.stockCode]) {
-      masterBOM[r.stockCode].qty -= qty;
-      if (masterBOM[r.stockCode].qty <= 0) delete masterBOM[r.stockCode];
+    const idx = masterBOM.findIndex(m => m.stockCode === r.stockCode);
+    if (idx !== -1) {
+      masterBOM[idx].qty -= qty;
+      if (masterBOM[idx].qty <= 0) masterBOM.splice(idx, 1);
     }
   });
 
@@ -583,7 +595,7 @@ function removeFromProject(index) {
 ═══════════════════════════════════════════════ */
 function clearProject() {
   projectHistory = [];
-  masterBOM = {};
+  masterBOM = [];
   renderProjectCart();
 }
 
@@ -613,19 +625,18 @@ function renderProjectCart() {
     </div>`).join('');
   document.getElementById('historyList').innerHTML = histHTML;
 
-  // Master BOM table
-  const entries = Object.entries(masterBOM).sort((a,b) => a[0].localeCompare(b[0]));
+  // Master BOM table — masterBOM is already in spreadsheet order
   let grandTotal = 0;
-  const trs = entries.map(([code, d]) => {
-    grandTotal += d.qty;
-    return `<tr><td class="td-master">${escHtml(code)}</td><td class="desc-cell">${escHtml(d.description)}</td><td><span class="qty-badge qty-master">${d.qty}</span></td></tr>`;
+  const trs = masterBOM.map(m => {
+    grandTotal += m.qty;
+    return `<tr><td class="td-master">${escHtml(m.stockCode)}</td><td class="desc-cell">${escHtml(m.description)}</td><td><span class="qty-badge qty-master">${m.qty}</span></td></tr>`;
   }).join('');
 
   document.getElementById('masterBomBody').innerHTML = `<div class="bom-table-wrap"><table>
     <thead><tr><th style="width:120px">Stock Code</th><th>Description</th><th style="width:100px">Total Qty</th></tr></thead>
     <tbody>${trs}</tbody>
     <tfoot class="ft-master"><tr>
-      <td colspan="2">${entries.length} unique items across ${projectHistory.length} array(s)</td>
+      <td colspan="2">${masterBOM.length} unique items across ${projectHistory.length} array(s)</td>
       <td>Total: ${grandTotal}</td>
     </tr></tfoot>
   </table></div>`;
@@ -687,15 +698,14 @@ function downloadPDF() {
   doc.setDrawColor(255, 183, 77);
   doc.line(14, y, W - 14, y); y += 4;
 
-  const entries = Object.entries(masterBOM).sort((a,b) => a[0].localeCompare(b[0]));
-  const tableBody = entries.map(([code, d]) => [code, d.description, String(d.qty)]);
-  let grandTotal = entries.reduce((s, [,d]) => s + d.qty, 0);
+  const tableBody = masterBOM.map(m => [m.stockCode, m.description, String(m.qty)]);
+  let grandTotal = masterBOM.reduce((s, m) => s + m.qty, 0);
 
   doc.autoTable({
     startY: y,
     head: [['Stock Code', 'Description', 'Total Qty']],
     body: tableBody,
-    foot: [['', `${entries.length} unique items across ${projectHistory.length} array(s)`, `Total: ${grandTotal}`]],
+    foot: [['', `${masterBOM.length} unique items across ${projectHistory.length} array(s)`, `Total: ${grandTotal}`]],
     styles: { fontSize: 8, cellPadding: 3, textColor: [40,40,40], lineColor: [220,220,220], lineWidth: 0.2 },
     headStyles: { fillColor: [30,30,30], textColor: [255,183,77], fontStyle: 'bold', fontSize: 7.5 },
     footStyles: { fillColor: [245,245,245], textColor: [100,100,100], fontStyle: 'bold', fontSize: 7.5 },

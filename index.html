@@ -3,186 +3,227 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Solar Configurator</title>
+<title>EZ-BOM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #121212; --card: #1e1e1e; --card2: #252525; --card3: #2a2a2a;
+  --border: #2e2e2e; --border2: #3a3a3a;
+  --accent: #00d4ff; --accent-dim: rgba(0,212,255,0.10); --accent-glow: rgba(0,212,255,0.22);
+  --ground: #bb86fc; --ground-dim: rgba(187,134,252,0.10); --ground-glow: rgba(187,134,252,0.22);
+  --success: #00e676; --warn: #ffb74d; --danger: #ff5252;
+  --text-primary: #f0f0f0; --text-secondary: #a0a0a0; --text-muted: #555;
+  --font: 'Inter','Segoe UI',system-ui,sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 14px;
+}
+body { background: var(--bg); color: var(--text-primary); font-family: var(--font); min-height: 100vh; }
 
-  :root {
-    --bg: #121212;
-    --card: #1e1e1e;
-    --card2: #252525;
-    --border: #2e2e2e;
-    --accent: #00d4ff;
-    --accent-dim: rgba(0,212,255,0.12);
-    --accent-glow: rgba(0,212,255,0.25);
-    --ground: #bb86fc;
-    --ground-dim: rgba(187,134,252,0.12);
-    --ground-glow: rgba(187,134,252,0.25);
-    --text-primary: #f0f0f0;
-    --text-secondary: #a0a0a0;
-    --text-muted: #606060;
-    --success: #00e676;
-    --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  }
+/* ── HEADER ── */
+.header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 50; }
+.header-logo { height: 40px; width: auto; display: block; }
+.header-fallback { display: none; align-items: center; gap: 10px; }
+.header-fallback .logo-icon { width: 36px; height: 36px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+.header-fallback .logo-text { font-size: 18px; font-weight: 800; letter-spacing: 1px; color: var(--accent); }
+.header-fallback .logo-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+.status-pill { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-secondary); background: var(--card2); border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); transition: background 0.4s; flex-shrink: 0; }
+.dot.live { background: var(--success); box-shadow: 0 0 5px var(--success); }
+.dot.err  { background: var(--danger); }
 
-  body { background: var(--bg); color: var(--text-primary); font-family: var(--font); min-height: 100vh; }
+/* ── LAYOUT ── */
+.main { max-width: 960px; margin: 0 auto; padding: 28px 20px 60px; }
+.section-label { font-size: 10px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
 
-  /* HEADER */
-  .header {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 32px;
-    display: flex; align-items: center; gap: 16px;
-  }
-  .header-logo { height: 44px; width: auto; display: block; }
-  .status-dot { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: background 0.3s; }
-  .dot.live { background: var(--success); box-shadow: 0 0 6px var(--success); }
+/* ── MODE TOGGLE ── */
+.toggle-wrap { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 5px; gap: 4px; margin-bottom: 20px; }
+.toggle-btn { flex: 1; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 9px; color: var(--text-secondary); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.18s; display: flex; align-items: center; justify-content: center; gap: 7px; font-family: var(--font); }
+.toggle-btn:not(.active):hover { background: var(--card2); color: var(--text-primary); }
+#btnRooftop.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+#btnGround.active  { background: var(--ground-dim); color: var(--ground);  border-color: var(--ground); }
 
-  /* MAIN */
-  .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+/* ── CONFIG CARD ── */
+.config-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; margin-bottom: 20px; }
+.config-card .card-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 18px; }
+.rooftop-card .card-title { color: var(--accent); }
+.ground-card  .card-title { color: var(--ground); }
 
-  /* TOGGLE */
-  .toggle-wrap { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 5px; gap: 4px; margin-bottom: 28px; }
-  .toggle-btn {
-    flex: 1; padding: 11px 16px;
-    background: transparent; border: 1px solid transparent; border-radius: 9px;
-    color: var(--text-secondary); font-size: 13px; font-weight: 600;
-    letter-spacing: 1px; text-transform: uppercase;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    font-family: var(--font);
-  }
-  .toggle-btn:not(.active):hover { background: var(--card2); color: var(--text-primary); }
-  #btnRooftop.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-  #btnGround.active  { background: var(--ground-dim); color: var(--ground);  border-color: var(--ground); }
+.fields { display: grid; gap: 14px; }
+.fields-4 { grid-template-columns: repeat(4, 1fr); }
+.fields-3 { grid-template-columns: repeat(3, 1fr); }
+.fields-2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 680px) { .fields-4,.fields-3,.fields-2 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 420px) { .fields-4,.fields-3,.fields-2 { grid-template-columns: 1fr; } }
 
-  /* CONFIG CARD */
-  .config-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px; }
-  .config-card h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; }
-  .rooftop-card h2 { color: var(--accent); }
-  .ground-card  h2 { color: var(--ground); }
+.field label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 7px; }
+.field select, .field input {
+  width: 100%; padding: 9px 13px;
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text-primary);
+  font-size: 13px; font-family: var(--font); outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s; -webkit-appearance: none;
+}
+.field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath fill='%23555' d='M0.5 0.5l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; padding-right: 30px; cursor: pointer; }
+.field select option { background: #2a2a2a; }
+.field input::placeholder { color: var(--text-muted); }
+.field input[type=number]::-webkit-inner-spin-button { opacity: 0.35; }
+.rooftop-card .field select:focus,.rooftop-card .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.ground-card  .field select:focus,.ground-card  .field input:focus { border-color: var(--ground); box-shadow: 0 0 0 3px var(--ground-dim); }
+.field input[type=text] { text-transform: none; }
 
-  .fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  @media (max-width: 620px) { .fields { grid-template-columns: 1fr; } }
+/* ── KIT BADGE ── */
+.kit-badge { margin-top: 13px; padding: 8px 13px; border-radius: var(--r-sm); font-size: 11px; display: none; align-items: center; gap: 7px; }
+.kit-badge.visible { display: flex; }
+.rooftop-card .kit-badge { background: var(--accent-dim); border: 1px solid var(--accent-glow); color: var(--accent); }
+.ground-card  .kit-badge { background: var(--ground-dim);  border: 1px solid var(--ground-glow);  color: var(--ground); }
+.kit-badge-warn { background: rgba(255,183,77,0.10) !important; border-color: rgba(255,183,77,0.3) !important; color: var(--warn) !important; }
 
-  .field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
-  .field select, .field input {
-    width: 100%; padding: 10px 14px;
-    background: var(--card2); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text-primary);
-    font-size: 14px; font-family: var(--font);
-    outline: none; transition: border-color 0.2s; -webkit-appearance: none;
-  }
-  .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23606060' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
-  .field select option { background: #2a2a2a; }
-  .field input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
-  .rooftop-card .field select:focus, .rooftop-card .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-  .ground-card  .field select:focus, .ground-card  .field input:focus { border-color: var(--ground); box-shadow: 0 0 0 3px var(--ground-dim); }
+/* ── LOADING ── */
+.loading-inline { margin-top: 12px; font-size: 11px; color: var(--text-muted); display: none; align-items: center; gap: 7px; }
+.loading-inline.visible { display: flex; }
+.spinner-sm { width: 11px; height: 11px; border: 2px solid var(--border2); border-radius: 50%; animation: spin 0.7s linear infinite; }
+.rooftop-card .spinner-sm { border-top-color: var(--accent); }
+.ground-card  .spinner-sm { border-top-color: var(--ground); }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .generate-btn {
-    margin-top: 20px; width: 100%; padding: 13px;
-    border: none; border-radius: 9px;
-    font-size: 13px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s; font-family: var(--font);
-  }
-  .generate-btn:hover { opacity: 0.88; }
-  .generate-btn:active { transform: scale(0.99); }
-  .rooftop-card .generate-btn { background: var(--accent); color: #000; }
-  .ground-card  .generate-btn { background: var(--ground); color: #000; }
+/* ── BUTTONS ROW ── */
+.btn-row { display: flex; gap: 10px; margin-top: 18px; }
+.btn { padding: 11px 18px; border: none; border-radius: var(--r-sm); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; transition: opacity 0.18s, transform 0.1s; font-family: var(--font); white-space: nowrap; }
+.btn:hover { opacity: 0.85; }
+.btn:active { transform: scale(0.98); }
+.btn-primary-rt { background: var(--accent); color: #000; flex: 1; }
+.btn-primary-gm { background: var(--ground); color: #000; flex: 1; }
+.btn-add { background: var(--card2); color: var(--success); border: 1px solid rgba(0,230,118,0.3); flex: 1; }
+.btn-add:hover { background: rgba(0,230,118,0.08); }
+@media (max-width: 480px) { .btn-row { flex-direction: column; } }
 
-  /* KIT BADGE */
-  .kit-badge { margin-top: 14px; padding: 9px 14px; border-radius: 8px; font-size: 12px; display: none; align-items: center; gap: 8px; }
-  .kit-badge.visible { display: flex; }
-  .kit-badge strong { font-weight: 700; }
-  .rooftop-card .kit-badge { background: var(--accent-dim); border: 1px solid var(--accent-glow); color: var(--accent); }
-  .ground-card  .kit-badge { background: var(--ground-dim);  border: 1px solid var(--ground-glow);  color: var(--ground); }
+/* ── PREVIEW BOM ── */
+.bom-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 20px; }
+.bom-header { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bom-header h2 { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.bom-header h2.rt { color: var(--accent); }
+.bom-header h2.gm { color: var(--ground); }
+.bom-count { font-size: 10px; color: var(--text-secondary); background: var(--card2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; flex-shrink: 0; }
+.bom-table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 9px 22px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); background: var(--card2); border-bottom: 1px solid var(--border); }
+thead th:last-child { text-align: right; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--card2); }
+tbody td { padding: 11px 22px; font-size: 12px; vertical-align: middle; }
+tbody td:first-child { font-family: 'Courier New', monospace; font-size: 11px; }
+tbody td:last-child { text-align: right; }
+.td-rt { color: var(--accent); }
+.td-gm { color: var(--ground); }
+.td-master { color: var(--warn); }
+.qty-badge { display: inline-block; padding: 2px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; min-width: 44px; text-align: center; }
+.qty-rt { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-glow); }
+.qty-gm { background: var(--ground-dim); color: var(--ground); border: 1px solid var(--ground-glow); }
+.qty-master { background: rgba(255,183,77,0.1); color: var(--warn); border: 1px solid rgba(255,183,77,0.3); }
+.desc-cell { color: var(--text-secondary); font-size: 11px; line-height: 1.4; }
+tfoot td { padding: 10px 22px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-secondary); border-top: 1px solid var(--border); background: var(--card2); }
+tfoot td:last-child { text-align: right; }
+tfoot.ft-rt td:last-child { color: var(--accent); }
+tfoot.ft-gm td:last-child { color: var(--ground); }
+tfoot.ft-master td:last-child { color: var(--warn); }
 
-  /* LOADING INLINE */
-  .loading-inline { margin-top: 14px; font-size: 12px; color: var(--text-muted); display: none; align-items: center; gap: 8px; }
-  .loading-inline.visible { display: flex; }
-  .spinner-sm { width: 12px; height: 12px; border: 2px solid var(--border); border-radius: 50%; animation: spin 0.7s linear infinite; }
-  .rooftop-card .spinner-sm { border-top-color: var(--accent); }
-  .ground-card  .spinner-sm { border-top-color: var(--ground); }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── EMPTY / ERROR STATES ── */
+.empty-state { padding: 48px 22px; text-align: center; color: var(--text-muted); font-size: 12px; line-height: 1.9; }
+.empty-state svg { margin-bottom: 12px; opacity: 0.2; }
+.no-match { padding: 36px 22px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.no-match strong { display: block; color: var(--text-secondary); font-size: 14px; margin-bottom: 6px; }
+.error-msg { padding: 12px 18px; background: rgba(255,82,82,0.07); border: 1px solid rgba(255,82,82,0.22); border-radius: var(--r-sm); color: #ff6b6b; font-size: 12px; margin-bottom: 18px; display: none; }
+.error-msg.visible { display: block; }
 
-  /* BOM CARD */
-  .bom-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-  .bom-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .bom-header h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
-  .bom-header h2.rt { color: var(--accent); }
-  .bom-header h2.gm { color: var(--ground); }
-  .bom-count { font-size: 11px; color: var(--text-secondary); background: var(--card2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; }
+/* ── PROJECT CART ── */
+.cart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 20px; }
+.cart-header { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cart-header-left { display: flex; align-items: center; gap: 10px; }
+.cart-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--warn); }
+.cart-badge { background: rgba(255,183,77,0.1); color: var(--warn); border: 1px solid rgba(255,183,77,0.3); font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+.cart-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-clear { padding: 6px 13px; background: transparent; border: 1px solid var(--border2); border-radius: var(--r-sm); color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+.btn-clear:hover { border-color: var(--danger); color: var(--danger); }
+.btn-pdf { padding: 8px 16px; background: linear-gradient(135deg, #1a1a1a, #222); border: 1px solid var(--warn); border-radius: var(--r-sm); color: var(--warn); font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; font-family: var(--font); transition: all 0.18s; display: flex; align-items: center; gap: 6px; }
+.btn-pdf:hover { background: rgba(255,183,77,0.08); }
 
-  .bom-table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th { padding: 10px 24px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); background: var(--card2); border-bottom: 1px solid var(--border); }
-  thead th:last-child { text-align: right; }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: var(--card2); }
-  tbody td { padding: 12px 24px; font-size: 13px; vertical-align: middle; }
-  tbody td:first-child { font-family: 'Courier New', monospace; font-size: 12px; }
-  tbody td:last-child { text-align: right; }
-  .td-rt { color: var(--accent); }
-  .td-gm { color: var(--ground); }
-  .qty-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; min-width: 48px; text-align: center; }
-  .qty-rt { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-glow); }
-  .qty-gm { background: var(--ground-dim);  color: var(--ground);  border: 1px solid var(--ground-glow); }
-  .desc-cell { color: var(--text-secondary); font-size: 12px; max-width: 340px; line-height: 1.4; }
-  tfoot td { padding: 12px 24px; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-secondary); border-top: 1px solid var(--border); background: var(--card2); }
-  tfoot td:last-child { text-align: right; }
-  tfoot.ft-rt td:last-child { color: var(--accent); }
-  tfoot.ft-gm td:last-child { color: var(--ground); }
+/* HISTORY LOG */
+.history-list { padding: 12px 22px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.history-item { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-secondary); padding: 6px 10px; background: var(--card2); border-radius: 7px; border: 1px solid var(--border); }
+.history-item .hist-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.history-item .hist-dot.rt { background: var(--accent); }
+.history-item .hist-dot.gm { background: var(--ground); }
+.history-item .hist-name { font-weight: 700; color: var(--text-primary); }
+.history-item .hist-kit { color: var(--text-muted); font-size: 10px; margin-left: auto; white-space: nowrap; }
+.hist-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; transition: color 0.15s; flex-shrink: 0; }
+.hist-remove:hover { color: var(--danger); }
 
-  /* STATES */
-  .empty-state { padding: 56px 24px; text-align: center; color: var(--text-muted); font-size: 13px; line-height: 1.8; }
-  .empty-state svg { margin-bottom: 14px; opacity: 0.25; }
-  .no-match { padding: 40px 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
-  .no-match strong { display: block; color: var(--text-secondary); font-size: 15px; margin-bottom: 8px; }
-  .error-msg { padding: 14px 20px; background: rgba(255,60,60,0.08); border: 1px solid rgba(255,60,60,0.25); border-radius: 8px; color: #ff6b6b; font-size: 13px; margin-bottom: 20px; display: none; }
-  .error-msg.visible { display: block; }
+/* MASTER BOM section inside cart */
+.master-bom-wrap { padding: 0; }
+
+/* ── DEBUG PANEL ── */
+.debug-wrap { margin-top: 16px; }
+.debug-wrap details { background: #161616; border: 1px solid #2a2a2a; border-radius: var(--r-md); overflow: hidden; }
+.debug-wrap summary { padding: 12px 16px; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+.debug-wrap summary::-webkit-details-marker { display: none; }
+.debug-inner { padding: 0 16px 16px; border-top: 1px solid #2a2a2a; padding-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 480px) { .debug-inner { grid-template-columns: 1fr; } }
+.debug-col-title { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 7px; }
+.debug-rt { color: var(--accent); }
+.debug-gm { color: var(--ground); }
+.debug-entries { font-family: 'Courier New', monospace; font-size: 10px; color: #666; line-height: 1.9; }
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <!-- Place transparrent_white_logo.png in the same folder as this HTML file -->
-  <img src="transparrent_white_logo.png" alt="Logo" class="header-logo"
-       onerror="this.style.display='none'; document.getElementById('fallbackLogo').style.display='flex';">
-  <div id="fallbackLogo" style="display:none; width:40px; height:40px; background:rgba(0,212,255,0.12); border:1px solid #00d4ff; border-radius:10px; align-items:center; justify-content:center;">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="header">
+  <img src="transparrent_white_logo.png" alt="EZ-BOM" class="header-logo"
+       onerror="this.style.display='none'; document.getElementById('hFallback').style.display='flex';">
+  <div class="header-fallback" id="hFallback">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">EZ-BOM</div>
+      <div class="logo-sub">Solar Configurator</div>
+    </div>
   </div>
-  <div class="status-dot">
+  <div class="status-pill">
     <div class="dot" id="statusDot"></div>
     <span id="statusText">Connecting…</span>
   </div>
-</div>
+</header>
 
-<div class="main">
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<main class="main">
   <div class="error-msg" id="errorMsg"></div>
 
+  <!-- MODE TOGGLE -->
   <div class="toggle-wrap">
     <button class="toggle-btn active" id="btnRooftop" onclick="switchMode('rooftop')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Rooftop
     </button>
     <button class="toggle-btn" id="btnGround" onclick="switchMode('ground')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
       Ground Mount
     </button>
   </div>
 
-  <!-- ROOFTOP CONFIG -->
+  <!-- ─── ROOFTOP CONFIG ─── -->
   <div class="config-card rooftop-card" id="rooftopConfig">
-    <h2>Rooftop Configuration</h2>
-    <div class="fields">
+    <div class="card-title">Rooftop Configuration</div>
+    <div class="fields fields-4">
+      <div class="field">
+        <label>Section / Array Name</label>
+        <input type="text" id="rtArrayName" placeholder="e.g. North Roof">
+      </div>
       <div class="field">
         <label>Roof Interface</label>
         <select id="rtInterface" onchange="updateKitPreview()">
@@ -202,19 +243,27 @@
       </div>
     </div>
     <div class="kit-badge" id="rtKitBadge">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-      Matching kit: <strong id="rtKitName">—</strong>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Kit: <strong id="rtKitName">—</strong></span>
     </div>
-    <div class="loading-inline" id="rtLoading">
-      <div class="spinner-sm"></div> Loading kit data…
+    <div class="loading-inline" id="rtLoading"><div class="spinner-sm"></div> Loading…</div>
+    <div class="btn-row">
+      <button class="btn btn-primary-rt" onclick="generateBOM()">Generate BOM</button>
+      <button class="btn btn-add" onclick="addToProject()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;vertical-align:middle;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to Project
+      </button>
     </div>
-    <button class="generate-btn" onclick="generateBOM()">Generate Bill of Materials</button>
   </div>
 
-  <!-- GROUND MOUNT CONFIG -->
+  <!-- ─── GROUND MOUNT CONFIG ─── -->
   <div class="config-card ground-card" id="groundConfig" style="display:none">
-    <h2>Ground Mount Configuration</h2>
-    <div class="fields" style="grid-template-columns: 1fr 1fr;">
+    <div class="card-title">Ground Mount Configuration</div>
+    <div class="fields fields-3">
+      <div class="field">
+        <label>Section / Array Name</label>
+        <input type="text" id="gmArrayName" placeholder="e.g. East Field">
+      </div>
       <div class="field">
         <label>Table Size (Panels)</label>
         <select id="gmSize" onchange="updateKitPreview()">
@@ -228,110 +277,159 @@
       </div>
     </div>
     <div class="kit-badge" id="gmKitBadge">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-      Matching kit: <strong id="gmKitName">—</strong>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Kit: <strong id="gmKitName">—</strong></span>
     </div>
-    <div class="loading-inline" id="gmLoading">
-      <div class="spinner-sm"></div> Loading kit data…
+    <div class="loading-inline" id="gmLoading"><div class="spinner-sm"></div> Loading…</div>
+    <div class="btn-row">
+      <button class="btn btn-primary-gm" onclick="generateBOM()">Generate BOM</button>
+      <button class="btn btn-add" onclick="addToProject()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;vertical-align:middle;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to Project
+      </button>
     </div>
-    <button class="generate-btn" onclick="generateBOM()">Generate Bill of Materials</button>
   </div>
 
-  <!-- BOM OUTPUT -->
+  <!-- ─── PREVIEW BOM ─── -->
   <div class="bom-card">
     <div class="bom-header">
-      <h2 id="bomTitle" class="rt">Bill of Materials</h2>
+      <h2 id="bomTitle" class="rt">Current BOM Preview</h2>
       <span class="bom-count" id="bomCount">—</span>
     </div>
     <div id="bomBody">
       <div class="empty-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
-        <div>Select your configuration above<br>and click <strong style="color:#a0a0a0">Generate Bill of Materials</strong></div>
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+        <div>Configure a system above, then click <strong style="color:#888">Generate BOM</strong></div>
       </div>
     </div>
   </div>
 
-  <!-- DEBUG PANEL: collapsible -->
-  <div id="debugPanel" style="margin-top:20px; display:none;">
-    <details style="background:#1a1a1a; border:1px solid #333; border-radius:12px; overflow:hidden;">
-      <summary style="padding:14px 18px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#606060; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; user-select:none;">
-        <span>Kit name diagnostic — exact kit names loaded from your spreadsheet</span>
-        <svg id="debugChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#606060" stroke-width="2" stroke-linecap="round" style="transition:transform 0.2s; flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+  <!-- ─── PROJECT CART ─── -->
+  <div class="cart-card" id="cartCard" style="display:none">
+    <div class="cart-header">
+      <div class="cart-header-left">
+        <span class="cart-title">Project Cart</span>
+        <span class="cart-badge" id="cartBadge">0 arrays</span>
+      </div>
+      <div class="cart-header-right">
+        <button class="btn-clear" onclick="clearProject()">Clear All</button>
+        <button class="btn-pdf" onclick="downloadPDF()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
+          Download PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- History Log -->
+    <div class="history-list" id="historyList"></div>
+
+    <!-- Master Consolidated BOM -->
+    <div class="master-bom-wrap">
+      <div style="padding:12px 22px 8px; border-bottom:1px solid var(--border);">
+        <span style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--warn);">Consolidated Master BOM</span>
+      </div>
+      <div id="masterBomBody"></div>
+    </div>
+  </div>
+
+  <!-- ─── DEBUG PANEL ─── -->
+  <div class="debug-wrap" id="debugPanel" style="display:none">
+    <details>
+      <summary>
+        Kit name diagnostic — exact names loaded from spreadsheet
+        <svg id="debugChevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" style="transition:transform 0.2s;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
       </summary>
-      <div style="padding:0 18px 18px; border-top:1px solid #2a2a2a; padding-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div class="debug-inner">
         <div>
-          <div style="font-size:10px; color:#00d4ff; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Rooftop kits</div>
-          <div id="debugRooftop" style="font-family:monospace; font-size:11px; color:#808080; line-height:1.8;"></div>
+          <div class="debug-col-title debug-rt">Rooftop kits</div>
+          <div class="debug-entries" id="debugRooftop"></div>
         </div>
         <div>
-          <div style="font-size:10px; color:#bb86fc; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Ground Mount kits</div>
-          <div id="debugGround" style="font-family:monospace; font-size:11px; color:#808080; line-height:1.8;"></div>
+          <div class="debug-col-title debug-gm">Ground Mount kits</div>
+          <div class="debug-entries" id="debugGround"></div>
         </div>
       </div>
     </details>
   </div>
-</div>
+
+</main>
 
 <script>
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
 const API = 'https://script.google.com/macros/s/AKfycbwOp4wqhAy6knch--Uhcz_iSLvAzMiVN3OZfsmgVa75vXaOF--FPap_RuuPidaYd8Mr/exec';
-let db = null;
+let db          = null;
 let currentMode = 'rooftop';
+let lastBOMRows = [];      // rows from most recent generateBOM
+let lastKitName = '';
+let lastMultiplier = 1;
 
+// Project Cart state
+let projectHistory = [];   // [{ arrayName, kitName, multiplier, mode, rows[] }]
+let masterBOM      = {};   // { stockCode: { description, qty } }
+
+/* ═══════════════════════════════════════════════
+   DATA LOAD
+═══════════════════════════════════════════════ */
 async function loadData() {
-  showLoading(true);
+  setLoading(true);
   try {
     const res = await fetch(API);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     db = await res.json();
-    document.getElementById('statusDot').classList.add('live');
-    document.getElementById('statusText').textContent = 'Data loaded';
+    setStatus('live', 'Data loaded');
     updateKitPreview();
-    updateDebugPanel();
+    renderDebugPanel();
   } catch (e) {
-    document.getElementById('statusText').textContent = 'Offline';
+    setStatus('err', 'Offline');
     db = { rooftop: [], ground: [] };
-    showError('Could not fetch kit data (' + e.message + '). The Generate button will still work — unmatched kits will show a warning.');
+    showError('Could not fetch kit data (' + e.message + '). Generate button still works — unmatched kits will warn.');
     updateKitPreview();
   } finally {
-    showLoading(false);
+    setLoading(false);
   }
 }
 
-function showLoading(on) {
+function setStatus(state, text) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'dot' + (state === 'live' ? ' live' : state === 'err' ? ' err' : '');
+  document.getElementById('statusText').textContent = text;
+}
+function setLoading(on) {
   document.getElementById('rtLoading').classList.toggle('visible', on && currentMode === 'rooftop');
   document.getElementById('gmLoading').classList.toggle('visible', on && currentMode === 'ground');
 }
-
 function showError(msg) {
   const el = document.getElementById('errorMsg');
-  el.textContent = msg;
-  el.classList.add('visible');
+  el.textContent = msg; el.classList.add('visible');
 }
 
+/* ═══════════════════════════════════════════════
+   MODE SWITCH
+═══════════════════════════════════════════════ */
 function switchMode(mode) {
   currentMode = mode;
   document.getElementById('btnRooftop').classList.toggle('active', mode === 'rooftop');
   document.getElementById('btnGround').classList.toggle('active', mode === 'ground');
   document.getElementById('rooftopConfig').style.display = mode === 'rooftop' ? '' : 'none';
-  document.getElementById('groundConfig').style.display = mode === 'ground' ? '' : 'none';
+  document.getElementById('groundConfig').style.display  = mode === 'ground'  ? '' : 'none';
   document.getElementById('bomTitle').className = mode === 'rooftop' ? 'rt' : 'gm';
-  clearBOM();
+  clearPreviewBOM();
+  lastBOMRows = [];
   updateKitPreview();
 }
 
+/* ═══════════════════════════════════════════════
+   KIT LOGIC
+═══════════════════════════════════════════════ */
 function getKitName() {
   if (currentMode === 'rooftop') {
-    const iface = document.getElementById('rtInterface').value;
+    const iface  = document.getElementById('rtInterface').value;
     const panels = parseInt(document.getElementById('rtPanels').value) || 0;
     return panels > 0 ? panels + ' Panel ' + iface : null;
   }
   return document.getElementById('gmSize').value + ' Panel Ground Mount';
-}
-
-function findRows(src, kitName) {
-  if (!kitName || !src) return [];
-  const needle = kitName.trim().toLowerCase();
-  return src.filter(r => r.kitName && r.kitName.trim().toLowerCase() === needle);
 }
 
 function getMultiplier() {
@@ -339,6 +437,17 @@ function getMultiplier() {
     ? document.getElementById('rtStrings').value
     : document.getElementById('gmTables').value;
   return Math.max(1, parseInt(raw) || 1);
+}
+
+function getArrayName() {
+  const id = currentMode === 'rooftop' ? 'rtArrayName' : 'gmArrayName';
+  return document.getElementById(id).value.trim() || 'Unnamed Array';
+}
+
+function findRows(src, kitName) {
+  if (!kitName || !src) return [];
+  const needle = kitName.trim().toLowerCase();
+  return src.filter(r => r.kitName && r.kitName.trim().toLowerCase() === needle);
 }
 
 function updateKitPreview() {
@@ -349,31 +458,28 @@ function updateKitPreview() {
   const badge = document.getElementById(isRT ? 'rtKitBadge' : 'gmKitBadge');
   const label = document.getElementById(isRT ? 'rtKitName'  : 'gmKitName');
   if (kitName) {
+    badge.classList.remove('kit-badge-warn');
     badge.classList.add('visible');
-    label.textContent = kitName + (db && src.length > 0 && !matched ? ' ⚠ not found in data' : '');
+    if (db && src.length > 0 && !matched) {
+      badge.classList.add('kit-badge-warn');
+      label.textContent = kitName + ' — not found in data';
+    } else {
+      label.textContent = kitName;
+    }
   } else {
     badge.classList.remove('visible');
   }
-  updateDebugPanel();
 }
 
-function clearBOM() {
-  document.getElementById('bomCount').textContent = '—';
-  document.getElementById('bomBody').innerHTML = `<div class="empty-state">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
-    <div>Select your configuration above<br>and click <strong style="color:#a0a0a0">Generate Bill of Materials</strong></div>
-  </div>`;
-}
-
+/* ═══════════════════════════════════════════════
+   GENERATE PREVIEW BOM
+═══════════════════════════════════════════════ */
 function generateBOM() {
-  if (!db) {
-    document.getElementById('bomBody').innerHTML = '<div class="no-match"><strong>Still loading…</strong>Please wait a moment and try again.</div>';
-    return;
-  }
+  if (!db) { showTempMessage('Still loading data, please wait…'); return; }
   const kitName    = getKitName();
   const multiplier = getMultiplier();
   const isRT       = currentMode === 'rooftop';
-  const rows = findRows(isRT ? db.rooftop : db.ground, kitName);
+  const rows       = findRows(isRT ? db.rooftop : db.ground, kitName);
   const tdCls      = isRT ? 'td-rt' : 'td-gm';
   const qtyCls     = isRT ? 'qty-rt' : 'qty-gm';
   const ftCls      = isRT ? 'ft-rt'  : 'ft-gm';
@@ -381,12 +487,17 @@ function generateBOM() {
   if (!rows.length) {
     document.getElementById('bomBody').innerHTML = `<div class="no-match">
       <strong>No matching kit found</strong>
-      Searched for: &ldquo;${escHtml(kitName)}&rdquo;<br>
-      <span style="font-size:11px;color:#505050;margin-top:6px;display:block">Verify the panel quantity matches a kit in your spreadsheet.</span>
+      Searched: &ldquo;${escHtml(kitName)}&rdquo;<br>
+      <span style="font-size:10px;color:#444;margin-top:5px;display:block">Check the kit name diagnostic below for available kits.</span>
     </div>`;
     document.getElementById('bomCount').textContent = '0 items';
-    return;
+    lastBOMRows = []; return;
   }
+
+  // Store for Add to Project
+  lastBOMRows    = rows;
+  lastKitName    = kitName;
+  lastMultiplier = multiplier;
 
   let total = 0;
   const trs = rows.map(r => {
@@ -396,19 +507,262 @@ function generateBOM() {
   }).join('');
 
   document.getElementById('bomBody').innerHTML = `<div class="bom-table-wrap"><table>
-    <thead><tr><th style="width:130px">Stock Code</th><th>Description</th><th style="width:110px">Total Qty</th></tr></thead>
+    <thead><tr><th style="width:120px">Stock Code</th><th>Description</th><th style="width:100px">Total Qty</th></tr></thead>
     <tbody>${trs}</tbody>
-    <tfoot class="${ftCls}"><tr><td colspan="2">${rows.length} line items &nbsp;&middot;&nbsp; ${escHtml(kitName)} &times; ${multiplier}</td><td>Total: ${total}</td></tr></tfoot>
+    <tfoot class="${ftCls}"><tr>
+      <td colspan="2">${rows.length} line items &nbsp;&middot;&nbsp; ${escHtml(kitName)} &times; ${multiplier}</td>
+      <td>Total: ${total}</td>
+    </tr></tfoot>
   </table></div>`;
   document.getElementById('bomCount').textContent = rows.length + ' items';
 }
 
-function updateDebugPanel() {
+function clearPreviewBOM() {
+  document.getElementById('bomBody').innerHTML = `<div class="empty-state">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+    <div>Configure a system above, then click <strong style="color:#888">Generate BOM</strong></div>
+  </div>`;
+  document.getElementById('bomCount').textContent = '—';
+}
+
+/* ═══════════════════════════════════════════════
+   PROJECT CART — ADD
+═══════════════════════════════════════════════ */
+function addToProject() {
+  // If no BOM generated yet, generate it first
+  if (!lastBOMRows.length) {
+    generateBOM();
+    if (!lastBOMRows.length) { showTempMessage('Generate a valid BOM first.'); return; }
+  }
+
+  const arrayName  = getArrayName();
+  const kitName    = lastKitName;
+  const multiplier = lastMultiplier;
+  const isRT       = currentMode === 'rooftop';
+  const rows       = lastBOMRows;
+
+  // Push to history
+  projectHistory.push({ arrayName, kitName, multiplier, mode: currentMode, rows });
+
+  // Accumulate into masterBOM
+  rows.forEach(r => {
+    const qty = Math.ceil(r.qty * multiplier);
+    if (masterBOM[r.stockCode]) {
+      masterBOM[r.stockCode].qty += qty;
+    } else {
+      masterBOM[r.stockCode] = { description: r.description, qty };
+    }
+  });
+
+  renderProjectCart();
+  flashCartButton(isRT);
+}
+
+/* ═══════════════════════════════════════════════
+   PROJECT CART — REMOVE ENTRY
+═══════════════════════════════════════════════ */
+function removeFromProject(index) {
+  const entry = projectHistory[index];
+  if (!entry) return;
+
+  // Subtract its quantities from masterBOM
+  entry.rows.forEach(r => {
+    const qty = Math.ceil(r.qty * entry.multiplier);
+    if (masterBOM[r.stockCode]) {
+      masterBOM[r.stockCode].qty -= qty;
+      if (masterBOM[r.stockCode].qty <= 0) delete masterBOM[r.stockCode];
+    }
+  });
+
+  projectHistory.splice(index, 1);
+  renderProjectCart();
+}
+
+/* ═══════════════════════════════════════════════
+   PROJECT CART — CLEAR
+═══════════════════════════════════════════════ */
+function clearProject() {
+  projectHistory = [];
+  masterBOM = {};
+  renderProjectCart();
+}
+
+/* ═══════════════════════════════════════════════
+   PROJECT CART — RENDER
+═══════════════════════════════════════════════ */
+function renderProjectCart() {
+  const cartCard = document.getElementById('cartCard');
+
+  if (!projectHistory.length) {
+    cartCard.style.display = 'none';
+    return;
+  }
+  cartCard.style.display = '';
+
+  // Badge
+  document.getElementById('cartBadge').textContent = projectHistory.length + (projectHistory.length === 1 ? ' array' : ' arrays');
+
+  // History log
+  const histHTML = projectHistory.map((e, i) => `
+    <div class="history-item">
+      <div class="hist-dot ${e.mode === 'rooftop' ? 'rt' : 'gm'}"></div>
+      <span class="hist-name">${escHtml(e.arrayName)}</span>
+      <span style="color:var(--text-muted);font-size:10px;">${escHtml(e.kitName)}</span>
+      <span class="hist-kit">&times; ${e.multiplier}</span>
+      <button class="hist-remove" onclick="removeFromProject(${i})" title="Remove">&times;</button>
+    </div>`).join('');
+  document.getElementById('historyList').innerHTML = histHTML;
+
+  // Master BOM table
+  const entries = Object.entries(masterBOM).sort((a,b) => a[0].localeCompare(b[0]));
+  let grandTotal = 0;
+  const trs = entries.map(([code, d]) => {
+    grandTotal += d.qty;
+    return `<tr><td class="td-master">${escHtml(code)}</td><td class="desc-cell">${escHtml(d.description)}</td><td><span class="qty-badge qty-master">${d.qty}</span></td></tr>`;
+  }).join('');
+
+  document.getElementById('masterBomBody').innerHTML = `<div class="bom-table-wrap"><table>
+    <thead><tr><th style="width:120px">Stock Code</th><th>Description</th><th style="width:100px">Total Qty</th></tr></thead>
+    <tbody>${trs}</tbody>
+    <tfoot class="ft-master"><tr>
+      <td colspan="2">${entries.length} unique items across ${projectHistory.length} array(s)</td>
+      <td>Total: ${grandTotal}</td>
+    </tr></tfoot>
+  </table></div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   PDF EXPORT
+═══════════════════════════════════════════════ */
+function downloadPDF() {
+  if (!projectHistory.length) { showTempMessage('Add at least one array to the project first.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const today = new Date().toLocaleDateString('en-ZA', { year:'numeric', month:'long', day:'numeric' });
+  let y = 18;
+
+  // ── Header bar
+  doc.setFillColor(18, 18, 18);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.setTextColor(0, 212, 255);
+  doc.text('EZ-BOM', 14, 14);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.setTextColor(160, 160, 160);
+  doc.text('Solar Bill of Materials', 14, 20);
+  doc.setFontSize(8);
+  doc.text('Generated: ' + today, W - 14, 14, { align: 'right' });
+  doc.text('EZ-BOM Platform', W - 14, 20, { align: 'right' });
+
+  y = 36;
+
+  // ── Project Summary heading
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(255, 183, 77);
+  doc.text('PROJECT SUMMARY', 14, y); y += 5;
+  doc.setDrawColor(255, 183, 77); doc.setLineWidth(0.3);
+  doc.line(14, y, W - 14, y); y += 6;
+
+  // History entries
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
+  projectHistory.forEach((e, i) => {
+    const mode = e.mode === 'rooftop' ? 'Rooftop' : 'Ground Mount';
+    doc.setTextColor(50, 50, 50);
+    doc.text(`${i + 1}.  ${e.arrayName}`, 16, y);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`${mode}  ·  ${e.kitName}  ×  ${e.multiplier}`, 60, y);
+    y += 5;
+    if (y > pageH - 40) { doc.addPage(); y = 20; }
+  });
+
+  y += 6;
+
+  // ── Consolidated BOM heading
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(255, 183, 77);
+  doc.text('CONSOLIDATED BILL OF MATERIALS', 14, y); y += 5;
+  doc.setDrawColor(255, 183, 77);
+  doc.line(14, y, W - 14, y); y += 4;
+
+  const entries = Object.entries(masterBOM).sort((a,b) => a[0].localeCompare(b[0]));
+  const tableBody = entries.map(([code, d]) => [code, d.description, String(d.qty)]);
+  let grandTotal = entries.reduce((s, [,d]) => s + d.qty, 0);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Stock Code', 'Description', 'Total Qty']],
+    body: tableBody,
+    foot: [['', `${entries.length} unique items across ${projectHistory.length} array(s)`, `Total: ${grandTotal}`]],
+    styles: { fontSize: 8, cellPadding: 3, textColor: [40,40,40], lineColor: [220,220,220], lineWidth: 0.2 },
+    headStyles: { fillColor: [30,30,30], textColor: [255,183,77], fontStyle: 'bold', fontSize: 7.5 },
+    footStyles: { fillColor: [245,245,245], textColor: [100,100,100], fontStyle: 'bold', fontSize: 7.5 },
+    alternateRowStyles: { fillColor: [248,248,248] },
+    columnStyles: { 0: { cellWidth: 32, fontStyle: 'bold', textColor: [0,100,120] }, 2: { cellWidth: 22, halign: 'right' } },
+    margin: { left: 14, right: 14 },
+    theme: 'grid'
+  });
+
+  y = doc.lastAutoTable.finalY + 14;
+  if (y > pageH - 30) { doc.addPage(); y = 20; }
+
+  // ── Warehouse sign-off
+  doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
+  doc.line(14, y, W - 14, y); y += 6;
+  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(80,80,80);
+  doc.text('WAREHOUSE SIGN-OFF', 14, y); y += 7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+
+  const fields = [
+    ['Picked by:', '__________________________'],
+    ['Checked by:', '__________________________'],
+    ['Date:', '__________________________'],
+    ['Signature:', '__________________________'],
+  ];
+  const colW = (W - 28) / 2;
+  fields.forEach(([label, blank], i) => {
+    const col = i % 2 === 0 ? 14 : 14 + colW + 8;
+    if (i % 2 === 0 && i > 0) y += 10;
+    doc.setTextColor(100,100,100); doc.text(label, col, y);
+    doc.setTextColor(180,180,180); doc.text(blank, col + 28, y);
+  });
+
+  y += 14;
+  doc.setFontSize(7); doc.setTextColor(180,180,180); doc.setFont('helvetica','italic');
+  doc.text('Generated by EZ-BOM · ' + today, W / 2, y, { align: 'center' });
+
+  doc.save('EZ-BOM_Project_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+/* ═══════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════ */
+function flashCartButton(isRT) {
+  const btns = document.querySelectorAll('.btn-add');
+  btns.forEach(b => {
+    b.style.background = isRT ? 'rgba(0,212,255,0.12)' : 'rgba(187,134,252,0.12)';
+    b.textContent = '✓ Added!';
+    setTimeout(() => {
+      b.style.background = '';
+      b.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;vertical-align:middle;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add to Project';
+    }, 1200);
+  });
+}
+
+function showTempMessage(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg; el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+function renderDebugPanel() {
   if (!db) return;
   const rtKits = [...new Set(db.rooftop.map(r => r.kitName))].sort();
   const gmKits = [...new Set(db.ground.map(r => r.kitName))].sort();
-  document.getElementById('debugRooftop').innerHTML = rtKits.map(k => `<div>"${escHtml(k)}"</div>`).join('') || '<div style="color:#444">none</div>';
-  document.getElementById('debugGround').innerHTML  = gmKits.map(k => `<div>"${escHtml(k)}"</div>`).join('') || '<div style="color:#444">none</div>';
+  document.getElementById('debugRooftop').innerHTML = rtKits.map(k => `<div>"${escHtml(k)}"</div>`).join('') || '<div style="color:#333">none</div>';
+  document.getElementById('debugGround').innerHTML  = gmKits.map(k => `<div>"${escHtml(k)}"</div>`).join('') || '<div style="color:#333">none</div>';
   document.getElementById('debugPanel').style.display = (rtKits.length || gmKits.length) ? '' : 'none';
 }
 
@@ -418,8 +772,8 @@ function escHtml(s) {
 
 document.addEventListener('toggle', e => {
   if (e.target.tagName === 'DETAILS') {
-    const chevron = e.target.querySelector('#debugChevron');
-    if (chevron) chevron.style.transform = e.target.open ? 'rotate(180deg)' : '';
+    const c = e.target.querySelector('#debugChevron');
+    if (c) c.style.transform = e.target.open ? 'rotate(180deg)' : '';
   }
 }, true);
 
